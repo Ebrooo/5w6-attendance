@@ -94,7 +94,9 @@ setInterval(()=>{if(!pending||!ready)return;if(['m1','m2','m3','lb'].some(i=>$(i
  if(typing){if($('lst'))renderList();pending=false;return}pending=false;render()},800);
 window.fbBoot=function(){if(!window.FBX){$('le').textContent=window.FBX_ERR||'Firebase غير جاهز';return}fx=window.FBX;
  fx.onAuth(u=>{if(u){$('login').style.display='none';$('le').textContent='';startData()}else{stopData();$('login').style.display='flex'}})};
-setTimeout(()=>{if(!fx&&!window.FBX)$('le').textContent='جاري الاتصال بـ Firebase...'},1500);
+setTimeout(()=>{if(!fx&&!window.FBX&&!window.FBX_ERR)$('le').textContent='جاري الاتصال بـ Firebase...'},1500);
+setTimeout(()=>{if(!window.FBX&&!window.FBX_ERR){window.FBX_ERR='تعذر تحميل Firebase. تأكد من الإنترنت، وجرّب Chrome محدّث، وافتح الموقع من رابط https';$('le').textContent=window.FBX_ERR}},10000);
+window.addEventListener('error',e=>{if(!window.FBX&&/firebase|gstatic/i.test(String(e.filename)))$('le').textContent='خطأ تحميل: '+e.message});
 async function doLogin(){if(!fx)return($('le').textContent=window.FBX_ERR||'استنى لحظة... Firebase لسه بيتحمّل');
  let u=$('u').value.trim().toLowerCase();if(!u.includes('@'))u+='@service56.app';$('le').textContent='جاري الدخول...';
  try{await fx.signIn(fx.auth,u,$('pw').value)}catch(e){$('le').textContent=['auth/invalid-credential','auth/wrong-password','auth/user-not-found','auth/invalid-email'].includes(e.code)?'اسم المستخدم أو كلمة المرور غير صحيحة':'خطأ: '+(e.code||e.message)}}
@@ -215,16 +217,18 @@ applyLogo();$('main').innerHTML='<div class="card">سجّل الدخول للم�
 </script>
 <script type="module">
 // ===== الصق إعدادات Firebase هنا (من Project settings > Your apps > Web app) =====
-const firebaseConfig={apiKey:"PASTE_API_KEY","AIzaSyBWoBSDuKPviEEQVF0a9-TzKRLTrJvltkM",authDomain:"w6-attendance.firebaseapp.com",projectId:"w6-attendance",storageBucket:"w6-attendance.firebasestorage.app",messagingSenderId:"580857656253",appId:"1:580857656253:web:11e34ecdfb0061a08bd8d4"};
-try{
- if(firebaseConfig.apiKey.startsWith('PASTE'))throw new Error('config');
- const B='https://www.gstatic.com/firebasejs/10.12.2/';
- const [A,Au,F]=await Promise.all([import(B+'firebase-app.js'),import(B+'firebase-auth.js'),import(B+'firebase-firestore.js')]);
- const app=A.initializeApp(firebaseConfig);
- let db;try{db=F.initializeFirestore(app,{localCache:F.persistentLocalCache({tabManager:F.persistentMultipleTabManager()})})}catch(e){db=F.getFirestore(app)}
- const auth=Au.getAuth(app);
- window.FBX={db,auth,doc:F.doc,collection:F.collection,setDoc:F.setDoc,deleteDoc:F.deleteDoc,onSnapshot:F.onSnapshot,deleteField:F.deleteField,signIn:Au.signInWithEmailAndPassword,signOut:Au.signOut,onAuth:cb=>Au.onAuthStateChanged(auth,cb)};
-}catch(e){window.FBX=null;window.FBX_ERR=e.message=='config'?'لسه ماحطيتش إعدادات Firebase في الملف (شوف خطوات التجهيز)':'تعذر تحميل Firebase: '+e.message}
-window.fbBoot&&window.fbBoot();
+const firebaseConfig={apiKey:"AIzaSyBWoBSDuKPviEEQVF0a9-TzKRLTrJvltkM",authDomain:"w6-attendance.firebaseapp.com",projectId:"w6-attendance",storageBucket:"w6-attendance.firebasestorage.app",messagingSenderId:"580857656253",appId:"1:580857656253:web:11e34ecdfb0061a08bd8d4"};
+(async()=>{
+ try{
+  if(firebaseConfig.apiKey.startsWith('PASTE'))throw new Error('config');
+  const B='https://www.gstatic.com/firebasejs/10.12.2/';
+  const [A,Au,F]=await Promise.all([import(B+'firebase-app.js'),import(B+'firebase-auth.js'),import(B+'firebase-firestore.js')]);
+  const app=A.initializeApp(firebaseConfig);
+  let db;try{db=F.initializeFirestore(app,{localCache:F.persistentLocalCache({tabManager:F.persistentMultipleTabManager()})})}catch(e){db=F.getFirestore(app)}
+  const auth=Au.getAuth(app);
+  window.FBX={db,auth,doc:F.doc,collection:F.collection,setDoc:F.setDoc,deleteDoc:F.deleteDoc,onSnapshot:F.onSnapshot,deleteField:F.deleteField,signIn:Au.signInWithEmailAndPassword,signOut:Au.signOut,onAuth:cb=>Au.onAuthStateChanged(auth,cb)};
+ }catch(e){window.FBX=null;window.FBX_ERR=e.message=='config'?'لسه ماحطيتش إعدادات Firebase في الملف (شوف خطوات التجهيز)':'تعذر تحميل Firebase: '+e.message}
+ window.fbBoot&&window.fbBoot();
+})();
 </script>
 </body></html>
