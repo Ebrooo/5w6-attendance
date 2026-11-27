@@ -33,6 +33,24 @@ th{background:var(--p2);color:#fff;padding:9px}tr:nth-child(even) td{background:
 .cal button.rec{font-weight:900;background:#d9f2e3;color:#14602f;border-color:#8fd3a8}.cal button.td{border-color:var(--a)}.cal button.sel{background:var(--p);color:#fff;border-color:var(--p2)}.cal .e{visibility:hidden}
 .fm{color:#b3124f;font-weight:bold;font-size:14px}.fc{flex:0 0 110px;text-align:center;border-right:2px solid #d6eef2;border-left:2px solid #d6eef2;padding:4px 6px}
 .pill{display:inline-block;background:#fff1d6;color:#8a5200;border-radius:10px;padding:2px 8px;font-size:12px}
+
+html{-webkit-text-size-adjust:100%}body{overflow-x:hidden}img{max-width:100%}
+.row>input,.row>select{flex:1 1 130px;min-width:0}.row>textarea{flex:1 1 200px;min-width:0}
+td{word-break:break-word}
+@media(max-width:640px){
+header{padding:8px 10px;gap:8px}header img{height:56px;width:56px}header h1{font-size:15px}header small{font-size:12px}
+nav{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:6px;position:static;overflow:visible}
+nav button{padding:9px 3px;font-size:13px;white-space:normal;line-height:1.25;border-radius:14px}
+main{padding:8px}.card{padding:10px;border-radius:14px}
+th,td{padding:5px 3px;font-size:12px}th{font-size:11px}
+.kt th:nth-child(1),.kt td:nth-child(1),.kt th:nth-child(4),.kt td:nth-child(4){display:none}
+.ph{width:38px;height:46px}button.b{padding:8px 10px;font-size:13px}button.b.s{padding:5px 7px;font-size:12px}
+.kid{flex-wrap:wrap;gap:6px}.kid label{flex:1 1 45%;min-width:0;font-size:15px}.fc{flex:1 1 auto;min-width:70px;padding:2px 4px;font-size:13px}
+.big{width:140px;height:165px}.mbox{padding:12px}
+.cal{gap:3px}.cal button{padding:7px 0;font-size:13px}
+input,select,textarea{font-size:16px}
+#login .mbox{padding:14px}
+}
 </style></head><body>
 <div id="login"><div class="mbox"><div id="lg" class="logoTxt">⛪</div><h2>خدمة 5 و 6 أولاد</h2><div>كنيسة مارمينا بشبرا</div>
 <input id="u" placeholder="اسم المستخدم"><input id="pw" type="password" placeholder="كلمة المرور">
@@ -133,7 +151,7 @@ function vKids(){return`<div class="card"><div class="row"><b>إضافة ولد:
 <div class="row"><button class="b a" onclick="tpl()">⬇️ تحميل قالب Excel</button><button class="b a" onclick="$('xf').click()">⬆️ رفع Excel</button><input type="file" id="xf" accept=".xlsx,.xls" hidden onchange="upXls(this)"><button class="b" onclick="$('phbulk').click()">🖼️ رفع صور كتير مرة واحدة (باسم الملف)</button><input type="file" id="phbulk" accept="image/*" multiple hidden onchange="bulkPhoto(this)">
 <button class="b" onclick="$('qrbulk').click()">📷 رفع QR كثير مرة واحدة (باسم الملف)</button></div></div>
 <div class="card"><div class="row">${srch()}<select onchange="kfam=this.value;renderList()">${famOpts(kfam)}</select><span class="pill" id="kc"></span></div><div id="lst">${kidRows()}</div></div>`}
-function kidRows(){const l=db.kids.filter(k=>k.name.includes(q.trim())&&(!kfam||k.fam==kfam));setTimeout(()=>{if($('kc'))$('kc').textContent='العدد: '+l.length},0);return`<table><tr><th>مسلسل</th><th>صورة</th><th>الاسم</th><th>تليفون</th><th>الأسرة</th><th>QR</th><th></th></tr>${l.map((k,i)=>`<tr><td>${db.kids.indexOf(k)+1}</td><td><img class="ph" src="${k.photo||''}"></td><td>${esc(k.name)}</td><td>${esc(k.phone)}</td><td>${esc(k.fam)}</td><td>${k.qr?'✅':'—'}</td><td><button class="b s" onclick="openKid('${k.id}')">فتح الحساب</button></td></tr>`).join('')}</table>`}
+function kidRows(){const l=db.kids.filter(k=>k.name.includes(q.trim())&&(!kfam||k.fam==kfam));setTimeout(()=>{if($('kc'))$('kc').textContent='العدد: '+l.length},0);return`<table class="kt"><tr><th>مسلسل</th><th>صورة</th><th>الاسم</th><th>تليفون</th><th>الأسرة</th><th>QR</th><th></th></tr>${l.map((k,i)=>`<tr><td>${db.kids.indexOf(k)+1}</td><td><img class="ph" src="${k.photo||''}"></td><td>${esc(k.name)}</td><td>${esc(k.phone)}</td><td>${esc(k.fam)}</td><td>${k.qr?'✅':'—'}</td><td><button class="b s" onclick="openKid('${k.id}')">فتح الحساب</button></td></tr>`).join('')}</table>`}
 function addKid(){const n=$('nn').value.trim();if(!n)return;db.kids.push({id:uid(),name:n,phone:$('np').value,fam:$('nf').value,photo:'',qr:'',ord:Date.now()});save();render()}
 function tpl(){const w=XLSX.utils.aoa_to_sheet([['مسلسل','اسم الولد','رقم التليفون','اسم الاسرة'],[1,'مثال',' ',db.fam[0]||'']]);w['!dataValidation']=[];const b=XLSX.utils.book_new();XLSX.utils.book_append_sheet(b,w,'كشوفات');XLSX.writeFile(b,'قالب_كشوفات_الأولاد.xlsx')}
 function upXls(e){const r=new FileReader();r.onload=()=>{const w=XLSX.read(r.result,{type:'array'}),rows=XLSX.utils.sheet_to_json(w.Sheets[w.SheetNames[0]],{header:1}).slice(1);let n=0;rows.forEach(x=>{if(!x[1])return;const f=String(x[3]||'').trim();if(f&&!db.fam.includes(f))db.fam.push(f);db.kids.push({id:uid(),name:String(x[1]).trim(),phone:String(x[2]||'').trim(),fam:f||db.fam[0],photo:'',qr:'',ord:Date.now()+n});n++});save();render();toast('تمت إضافة '+n+' ولد')};r.readAsArrayBuffer(e.files[0])}
