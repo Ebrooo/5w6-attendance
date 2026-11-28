@@ -69,6 +69,7 @@ input,select,textarea{font-size:16px}
 <div class="modal" id="m2"><div class="mbox"><h3>سكان QR للحضور</h3><div id="sd" class="pill"></div><video id="vid" playsinline muted></video><div id="ss" style="margin:8px 0;min-height:22px"></div><button class="b r" onclick="stopScan()">إغلاق</button></div></div>
 <div class="modal" id="m3" style="z-index:40"><div class="mbox" id="m3b" style="max-width:380px"></div></div>
 <div class="modal" id="lb" style="z-index:60;flex-direction:column;gap:10px" onclick="this.classList.remove('on')"><img id="lbi" style="max-width:96%;max-height:84vh;border-radius:14px;box-shadow:0 6px 30px #000a;background:#fff"><button class="b r">✖ إغلاق</button></div>
+<div class="modal" id="m5" style="z-index:45"><div class="mbox" id="m5b" style="max-width:360px"></div></div>
 <div id="toast"></div>
 <input type="file" id="qrbulk" accept="image/*" multiple hidden onchange="bulkQR(this)">
 <script>
@@ -116,7 +117,7 @@ function startData(){if(unsubs.length)return;need=new Set(['kids','meta','att','
  L('kn',s=>{db.kn={};shadow.kn={};s.docs.forEach(d=>{const m={};Object.entries(d.data()).forEach(([id,t])=>{m[id]=t;shadow.kn[d.id+'|'+id]=t});db.kn[d.id]=m})});
  L('vis',s=>{db.vis=s.docs.map(d=>({id:d.id,...d.data()}));shadow.vis={};db.vis.forEach(v=>shadow.vis[v.id]=JSON.stringify(visData(v)))})}
 function stopData(){unsubs.forEach(f=>f());unsubs=[];ready=false;pending=false}
-setInterval(()=>{if(!pending||!ready)return;if(['m1','m2','m3','lb'].some(i=>$(i).classList.contains('on')))return;const a=document.activeElement,typing=a&&(a.tagName=='TEXTAREA'||(a.tagName=='INPUT'&&!['checkbox','date','file','button'].includes(a.type)));
+setInterval(()=>{if(!pending||!ready)return;if(['m1','m2','m3','m5','lb'].some(i=>$(i).classList.contains('on')))return;const a=document.activeElement,typing=a&&(a.tagName=='TEXTAREA'||(a.tagName=='INPUT'&&!['checkbox','date','file','button'].includes(a.type)));
  if(typing){if($('lst'))renderList();pending=false;return}pending=false;render()},800);
 window.fbBoot=function(){if(!window.FBX){$('le').textContent=window.FBX_ERR||'Firebase غير جاهز';return}fx=window.FBX;
  fx.onAuth(u=>{if(u){$('login').style.display='none';$('le').textContent='';startData()}else{stopData();$('login').style.display='flex'}})};
@@ -129,6 +130,24 @@ async function doLogin(){if(!fx)return($('le').textContent=window.FBX_ERR||'اس
 function logout(){fx&&fx.signOut(fx.auth)}
 $('pw').addEventListener('keydown',e=>{if(e.key=='Enter')doLogin()});
 // ---- end Firebase
+// ---- قص الصور
+let cr=null;
+function cropImg(file,cb){if(!file)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const S=300,min=Math.max(S/im.width,S/im.height);cr={im,S,min,s:min,cx:S/2,cy:S/2,cb};
+ $('m5b').innerHTML=`<h3>قص الصورة</h3><p style="margin:0 0 8px;font-size:13px">اسحب الصورة لتحريكها، وحرّك الشريط للتكبير. الدايرة هي اللي هتظهر.</p><canvas id="crc" width="300" height="300" style="width:100%;max-width:300px;touch-action:none;border-radius:12px;background:#ddd;display:block;margin:auto;cursor:grab"></canvas><input type="range" id="crz" min="1" max="4" step="0.01" value="1" style="width:100%;margin:12px 0" oninput="cropZoom(this.value)"><div class="row"><button class="b g" onclick="cropDone()">✂️ قص وحفظ</button><button class="b a" onclick="cropSkip()">الصورة كاملة</button><button class="b" onclick="cropCancel()">إلغاء</button></div>`;
+ $('m5').classList.add('on');cropBind();cropDraw()};im.onerror=()=>say('الملف ده مش صورة');im.src=r.result};r.readAsDataURL(file)}
+function cropClamp(){const c=cr,w=c.im.width*c.s,h=c.im.height*c.s;c.cx=Math.min(w/2,Math.max(c.S-w/2,c.cx));c.cy=Math.min(h/2,Math.max(c.S-h/2,c.cy))}
+function cropDraw(){const c=cr,x=$('crc').getContext('2d');cropClamp();x.fillStyle='#fff';x.fillRect(0,0,c.S,c.S);const w=c.im.width*c.s,h=c.im.height*c.s;x.drawImage(c.im,c.cx-w/2,c.cy-h/2,w,h);
+ x.fillStyle='rgba(0,0,0,.5)';x.beginPath();x.rect(0,0,c.S,c.S);x.arc(c.S/2,c.S/2,c.S/2-4,0,Math.PI*2,true);x.fill('evenodd');x.strokeStyle='#fff';x.lineWidth=2;x.beginPath();x.arc(c.S/2,c.S/2,c.S/2-4,0,Math.PI*2);x.stroke()}
+function cropZoom(v){const c=cr,o=c.s;c.s=c.min*parseFloat(v);const k=c.s/o;c.cx=c.S/2+(c.cx-c.S/2)*k;c.cy=c.S/2+(c.cy-c.S/2)*k;cropDraw()}
+function cropBind(){const cv=$('crc');let dr=null;cv.onpointerdown=e=>{dr={x:e.clientX,y:e.clientY,cx:cr.cx,cy:cr.cy};cv.setPointerCapture(e.pointerId)};
+ cv.onpointermove=e=>{if(!dr)return;const k=cr.S/cv.getBoundingClientRect().width;cr.cx=dr.cx+(e.clientX-dr.x)*k;cr.cy=dr.cy+(e.clientY-dr.y)*k;cropDraw()};
+ cv.onpointerup=cv.onpointercancel=()=>{dr=null};
+ cv.onwheel=e=>{e.preventDefault();const z=$('crz');z.value=Math.min(4,Math.max(1,+z.value+(e.deltaY<0?.1:-.1)));cropZoom(z.value)}}
+function cropOut(f){const o=document.createElement('canvas');o.width=o.height=240;const x=o.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,240,240);f(x);return o.toDataURL('image/jpeg',.85)}
+function cropDone(){const c=cr,k=240/c.S,w=c.im.width*c.s*k,h=c.im.height*c.s*k;cropClose(cropOut(x=>x.drawImage(c.im,c.cx*k-w/2,c.cy*k-h/2,w,h)))}
+function cropSkip(){const c=cr,k=Math.min(240/c.im.width,240/c.im.height),w=c.im.width*k,h=c.im.height*k;cropClose(cropOut(x=>x.drawImage(c.im,120-w/2,120-h/2,w,h)))}
+function cropClose(d){$('m5').classList.remove('on');const f=cr.cb;cr=null;f(d)}
+function cropCancel(){$('m5').classList.remove('on');cr=null}
 function applyLogo(){const L=db.logo||LOGO;$('hl').innerHTML=`<img src="${L}">`;$('lg').innerHTML=`<img src="${L}" style="height:140px;border-radius:50%">`}
 function img(file,max,cb){const r=new FileReader();r.onload=()=>{const i=new Image();i.onload=()=>{const s=Math.min(1,max/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=i.width*s;c.height=i.height*s;c.getContext('2d').drawImage(i,0,0,c.width,c.height);cb(c.toDataURL('image/jpeg',.8))};i.onerror=()=>cb('');i.src=r.result};r.readAsDataURL(file)}
 function setLogo(e){img(e.files[0],300,d=>{db.logo=d;save();applyLogo()})}
@@ -194,10 +213,10 @@ $('mb').innerHTML=`<img class="big" src="${k.photo||''}"><div class="row" style=
 <div class="row"><button class="b g" onclick="saveKid('${id}')">حفظ</button><button class="b r" onclick="askOk('حذف الولد؟',()=>{db.kids=db.kids.filter(x=>x.id!='${id}');save();$('m1').classList.remove('on');render()})">حذف</button><button class="b" onclick="$('m1').classList.remove('on')">إغلاق</button></div>`;$('m1').classList.add('on')}
 function saveKid(id){const k=kid(id);k.name=$('en').value;k.phone=$('ep').value;k.fam=$('ef').value;save();$('m1').classList.remove('on');render()}
 // ---- الأسر
-function vFam(){return`<div class="card"><div class="row"><input id="fn" placeholder="اسم أسرة جديدة" value="${esc(pfn)}" oninput="pfn=this.value"><img id="fpv" class="fimg" src="${pfi}" style="${pfi?'':'display:none'}"><button class="b a" onclick="$('ff').click()">🖼️ صورة الأسرة</button><input type="file" id="ff" accept="image/*" hidden onchange="img(this.files[0],240,d=>{if(d){pfi=d;$('fpv').src=d;$('fpv').style.display='inline-block'}})"><button class="b g" onclick="addFam()">إضافة</button></div>
+function vFam(){return`<div class="card"><div class="row"><input id="fn" placeholder="اسم أسرة جديدة" value="${esc(pfn)}" oninput="pfn=this.value"><img id="fpv" class="fimg" src="${pfi}" style="${pfi?'':'display:none'}"><button class="b a" onclick="$('ff').click()">🖼️ صورة الأسرة</button><input type="file" id="ff" accept="image/*" hidden onchange="const f=this.files[0];this.value='';cropImg(f,d=>{pfi=d;$('fpv').src=d;$('fpv').style.display='inline-block'})"><button class="b g" onclick="addFam()">إضافة</button></div>
 ${db.fam.map((f,i)=>`<div class="kid">${db.famImg[f]?`<img class="fimg" src="${db.famImg[f]}">`:'<span class="fimg" style="display:flex;align-items:center;justify-content:center;font-size:22px">👪</span>'}<label>${esc(f)} <span class="pill">${db.kids.filter(k=>inFam(k,f)).length} ولد</span></label><button class="b s a" onclick="$('fi${i}').click()">🖼️ ${db.famImg[f]?'تغيير الصورة':'إضافة صورة'}</button><input type="file" id="fi${i}" accept="image/*" hidden onchange="setFamImg(${i},this)">${db.famImg[f]?`<button class="b s" onclick="delFamImg(${i})">حذف الصورة</button>`:''}<button class="b s" onclick="renF(${i})">تعديل</button><button class="b s r" onclick="delF(${i})">حذف</button></div>`).join('')}</div>`}
 function addFam(){const n=pfn.trim();if(!n)return say('اكتب اسم الأسرة الأول');if(db.fam.includes(n))return say('الأسرة دي موجودة قبل كده');db.fam.push(n);if(pfi)db.famImg[n]=pfi;pfn='';pfi='';save();render()}
-function setFamImg(i,e){const f=e.files[0];if(!f)return;img(f,240,d=>{if(d){db.famImg[db.fam[i]]=d;save();render()}})}
+function setFamImg(i,e){const f=e.files[0];e.value='';if(!f)return;const n=db.fam[i];cropImg(f,d=>{db.famImg[n]=d;save();render()})}
 function delFamImg(i){delete db.famImg[db.fam[i]];save();render()}
 function renF(i){askText('الاسم الجديد للأسرة',db.fam[i],n=>{db.kids.forEach(k=>k.fam==db.fam[i]&&(k.fam=n));if(db.famImg[db.fam[i]]){db.famImg[n]=db.famImg[db.fam[i]];delete db.famImg[db.fam[i]]}db.fam[i]=n;save();render()})}
 function delF(i){askOk('حذف الأسرة؟ (الأولاد هيفضلوا بدون تغيير)',()=>{delete db.famImg[db.fam[i]];db.fam.splice(i,1);save();render()})}
