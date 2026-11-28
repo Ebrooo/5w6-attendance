@@ -51,6 +51,10 @@ th,td{padding:5px 3px;font-size:12px}th{font-size:11px}
 input,select,textarea{font-size:16px}
 #login .mbox{padding:14px}
 }
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.fbox{border:0;border-radius:20px;color:#fff;padding:22px 10px;font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;box-shadow:0 4px 12px #0003;min-height:110px;justify-content:center}
+.fbox .fn{font-size:19px;font-weight:bold;text-align:center}.fbox small{font-size:13px;opacity:.95}.fbox:active{transform:scale(.97)}
+.bd.big2{font-size:15px;padding:2px 11px;background:#fff;color:#c2185b;font-weight:bold}
 </style></head><body>
 <div id="login"><div class="mbox"><div id="lg" class="logoTxt">⛪</div><h2>خدمة 5 و 6 أولاد</h2><div>كنيسة مارمينا بشبرا</div>
 <input id="u" placeholder="اسم المستخدم"><input id="pw" type="password" placeholder="كلمة المرور">
@@ -138,14 +142,28 @@ function say(t){dlg(`<div style="white-space:pre-line;margin-bottom:12px">${esc(
 const kid=id=>db.kids.find(k=>k.id===id),dates=()=>Object.keys(db.att).sort();
 function pct(k){const d=dates();if(!d.length)return null;return Math.round(d.filter(x=>db.att[x][k.id]).length/d.length*100)}
 function weak(k){const d=dates();if(!d.length)return false;const l=d.slice(-2);return(l.length==2&&l.every(x=>!db.att[x][k.id]))||pct(k)<50}
-function notifs(){const n=[];db.kids.filter(weak).forEach(k=>n.push({key:'w'+k.id+dates().length,t:`⚠️ ${k.name}: حضور ضعيف – محتاج متابعة`}));
-Object.entries(db.notes).forEach(([d,v])=>v.notify&&v.text&&n.push({key:'a'+d+v.text,t:`📝 ملاحظة حضور ${d}: ${v.text}`}));
-db.vis.forEach(v=>v.notify&&v.note&&n.push({key:'v'+v.id,t:`🏠 افتقاد ${kid(v.kid)?.name||''} (${v.date}): ${v.note}`}));return n.filter(x=>!db.dis.includes(x.key))}
-function render(){$('nav').innerHTML=TABS.map(([k,l])=>`<button class="${tab==k?'on':''}" onclick="tab='${k}';q='';render()">${l}${k=='not'&&notifs().filter(x=>!db.seen.includes(x.key)).length?`<span class="bd">${notifs().filter(x=>!db.seen.includes(x.key)).length}</span>`:''}</button>`).join('');
+function notifs(){const n=[];db.kids.filter(weak).forEach(k=>n.push({fam:k.fam,key:'w'+k.id+dates().length,t:`⚠️ ${k.name}: حضور ضعيف – محتاج متابعة`}));
+Object.entries(db.notes).forEach(([d,v])=>v.notify&&v.text&&n.push({fam:'*',key:'a'+d+v.text,t:`📝 ملاحظة حضور ${d}: ${v.text}`}));
+db.vis.forEach(v=>v.notify&&v.note&&n.push({fam:kid(v.kid)?.fam||'',key:'v'+v.id,t:`🏠 افتقاد ${kid(v.kid)?.name||''} (${v.date}): ${v.note}`}));return n.filter(x=>!db.dis.includes(x.key))}
+function render(){if(afam&&afam!='?'&&!db.fam.includes(afam))afam='';if(nfam&&nfam!='*'&&nfam!='?'&&!db.fam.includes(nfam))nfam='';const nt=notifs().length;
+$('nav').innerHTML=TABS.map(([k,l])=>`<button class="${tab==k?'on':''}" onclick="tab='${k}';q='';render()">${l}${k=='not'&&nt?`<span class="bd">${nt}</span>`:''}</button>`).join('');
 $('main').innerHTML=({kids:vKids,fam:vFam,att:vAtt,rep:vRep,vis:vVis,not:vNot})[tab]();applyLogo()}
+const inFam=(k,f)=>f=='?'?!db.fam.includes(k.fam):k.fam==f;
+const nOf=(x,f)=>f=='*'?x.fam==='*':f=='?'?(x.fam!=='*'&&!db.fam.includes(x.fam)):x.fam===f;
+const famName=f=>f=='?'?'بدون أسرة':f=='*'?'إشعارات عامة':f;
+const FCOL=['#1796ab,#0b6275','#f39200,#c26f00','#f4577a,#c2305a','#e8352b,#b3201a','#2e9e5b,#1d7a43','#7b5ea7,#5a418a'];
+function famBoxes(mode){const fl=[...db.fam];const n=notifs(),a=db.att[adate]||{};if(db.kids.some(k=>!db.fam.includes(k.fam))||(mode=='not'&&n.some(x=>nOf(x,'?'))))fl.push('?');
+ if(mode=='not'&&n.some(x=>x.fam==='*'))fl.push('*');
+ if(!fl.length)return'<div class="card">لا توجد أسر. ضيف أسر من تبويب "الأسر".</div>';
+ return`<div class="fgrid">${fl.map((f,i)=>{const ks=f=='*'?[]:db.kids.filter(k=>inFam(k,f));let info;
+  if(mode=='att')info=`<small>حاضر ${ks.filter(k=>a[k.id]).length} / ${ks.length}</small>`;else info=`<small>${f=='*'?'':ks.length+' ولد'}</small>`;
+  const c=n.filter(x=>nOf(x,f)).length;
+  const badge=mode=='not'?`<span class="bd big2">${c}</span>`:'';
+  return`<button class="fbox" style="background:linear-gradient(135deg,${FCOL[i%FCOL.length].split(',')[0]},${FCOL[i%FCOL.length].split(',')[1]})" data-f="${esc(f)}" onclick="${mode=='att'?'afam':'nfam'}=this.dataset.f;render()"><span class="fn">${esc(famName(f))}</span>${badge}${info}</button>`}).join('')}</div>`}
+const famBack=(v,txt)=>`<div class="row"><button class="b s" onclick="${v}='';render()">▶ رجوع للأسر</button><b class="fm" style="font-size:17px">${esc(txt)}</b>`;
 const famSel=(v,id)=>`<select ${id?`id="${id}"`:''}>${db.fam.map(f=>`<option ${f==v?'selected':''}>${esc(f)}</option>`).join('')}</select>`;
 const srch=()=>`<input placeholder="بحث بالاسم" value="${esc(q)}" oninput="q=this.value;renderList()" id="qs"><button class="b" onclick="renderList()">🔍 بحث</button>`;
-function renderList(){const f={kids:kidRows,att:attRows,vis:visRows}[tab];if(f)$('lst').innerHTML=f()}
+function renderList(){const f={kids:kidRows,att:attRows,vis:visRows}[tab];const e=$('lst');if(f&&e)e.innerHTML=f()}
 // ---- الأولاد
 function vKids(){return`<div class="card"><div class="row"><b>إضافة ولد:</b><input id="nn" placeholder="اسم الولد"><input id="np" placeholder="رقم التليفون">${famSel('', 'nf')}<button class="b g" onclick="addKid()">إضافة</button></div>
 <div class="row"><button class="b a" onclick="tpl()">⬇️ تحميل قالب Excel</button><button class="b a" onclick="$('xf').click()">⬆️ رفع Excel</button><input type="file" id="xf" accept=".xlsx,.xls" hidden onchange="upXls(this)"><button class="b" onclick="$('phbulk').click()">🖼️ رفع صور كتير مرة واحدة (باسم الملف)</button><input type="file" id="phbulk" accept="image/*" multiple hidden onchange="bulkPhoto(this)">
@@ -182,7 +200,7 @@ ${pr.map((k,i)=>`<div class="kid"><span>${i+1}</span><img class="ph" src="${k.ph
 <div class="row" style="margin-top:10px"><button class="b" onclick="adate=rd;tab='att';render();scrollTo(0,0)">✏️ فتح اليوم للتعديل في تسجيل الحضور</button></div></div>
 <div class="card"><b>⬇️ تقرير حضور (Excel)</b><div class="row">من <input type="date" id="rf" value="${rdf}" onchange="rdf=this.value"> إلى <input type="date" id="rt" value="${rdt}" onchange="rdt=this.value"><select id="rfam" onchange="rfm=this.value;render()">${famOpts(rfm)}</select><button class="b a" onclick="attRep()">⬇️ تحميل</button></div></div>`}
 // ---- كالندر الحضور
-let cm=null,rd='',afam='',kfam='',rfm='',rdf='',rdt='';
+let cm=null,rd='',afam='',nfam='',kfam='',rfm='',rdf='',rdt='';
 const famOpts=v=>`<option value="">كل الأسر</option>${db.fam.map(f=>`<option ${f==v?'selected':''}>${esc(f)}</option>`).join('')}`;const pad=n=>String(n).padStart(2,'0');
 function calHtml(){const sel=rd;if(!cm){const d=new Date(sel+'T00:00:00');cm={y:d.getFullYear(),m:d.getMonth()}}
 const first=new Date(cm.y,cm.m,1),off=(first.getDay()+1)%7,nd=new Date(cm.y,cm.m+1,0).getDate(),today=new Date().toISOString().slice(0,10);
@@ -193,9 +211,9 @@ function calGo(n){cm.m+=n;if(cm.m>11){cm.m=0;cm.y++}if(cm.m<0){cm.m=11;cm.y--}re
 // ---- الحضور
 function vAtt(){const nt=db.notes[adate]||{};return`<div class="card"><div class="row"><b>التاريخ:</b><input type="date" value="${adate}" onchange="adate=this.value;cm=null;render()"><button class="b g" onclick="startScan()">📷 تسجيل بسكان QR</button></div>
 <div class="row"><textarea id="an" rows="2" style="flex:1" placeholder="ملاحظات اليوم">${esc(nt.text)}</textarea><label><input type="checkbox" id="anc" ${nt.notify?'checked':''}> إظهار في الإشعارات</label><button class="b s" onclick="db.notes[adate]={text:an.value,notify:anc.checked};save();toast('تم الحفظ');render()">حفظ الملاحظة</button></div></div>
-<div class="card"><div class="row">${srch()}<select onchange="afam=this.value;renderList()">${famOpts(afam)}</select><span class="pill" id="cnt"></span></div><div id="lst">${attRows()}</div></div>`}
-function attRows(){const a=db.att[adate]||{},l=db.kids.filter(k=>k.name.includes(q.trim())&&(!afam||k.fam==afam));setTimeout(()=>{const fk=db.kids.filter(k=>!afam||k.fam==afam);if($('cnt'))$('cnt').textContent='حاضر: '+fk.filter(k=>a[k.id]).length+' / '+fk.length},0);
-const kn=db.kn[adate]||{};return l.map(k=>`<div class="kid"><input type="checkbox" ${a[k.id]?'checked':''} onchange="mark('${k.id}',this.checked)"><img class="ph" src="${k.photo||''}"><label>${esc(k.name)}${kn[k.id]?`<div class="pill" style="display:block;margin-top:4px;white-space:pre-line">📝 ${esc(kn[k.id])}</div>`:''}</label><span class="fm fc">(${esc(k.fam)})</span><span class="weak fc">${weak(k)?'حضور ضعيف':''}</span><button class="b s ${kn[k.id]?'a':''}" onclick="kidNote('${k.id}')">📝 ${kn[k.id]?'تعديل':'ملاحظة'}</button></div>`).join('')||'لا يوجد'}
+${afam?`<div class="card">${famBack('afam',famName(afam))}<span class="pill" id="cnt"></span></div><div class="row">${srch()}</div><div id="lst">${attRows()}</div></div>`:famBoxes('att')}`}
+function attRows(){const a=db.att[adate]||{},l=db.kids.filter(k=>k.name.includes(q.trim())&&(!afam||inFam(k,afam)));setTimeout(()=>{const fk=db.kids.filter(k=>!afam||inFam(k,afam));if($('cnt'))$('cnt').textContent='حاضر: '+fk.filter(k=>a[k.id]).length+' / '+fk.length},0);
+const kn=db.kn[adate]||{};return l.map(k=>`<div class="kid"><input type="checkbox" ${a[k.id]?'checked':''} onchange="mark('${k.id}',this.checked)"><img class="ph" src="${k.photo||''}"><label>${esc(k.name)}${kn[k.id]?`<div class="pill" style="display:block;margin-top:4px;white-space:pre-line">📝 ${esc(kn[k.id])}</div>`:''}</label><span class="weak fc">${weak(k)?'حضور ضعيف':''}</span><button class="b s ${kn[k.id]?'a':''}" onclick="kidNote('${k.id}')">📝 ${kn[k.id]?'تعديل':'ملاحظة'}</button></div>`).join('')||'لا يوجد'}
 function kidNote(id){const k=kid(id);dlg(`<h3>ملاحظة ${esc(k.name)} – ${adate}</h3><textarea id="kn" rows="4" style="width:100%" placeholder="اكتب ملاحظة...">${esc((db.kn[adate]||{})[id]||'')}</textarea><div class="row" style="margin-top:10px"><button class="b g" onclick="saveKN('${id}')">حفظ</button><button class="b" onclick="dlgClose(false)">إلغاء</button></div>`,null);setTimeout(()=>$('kn').focus(),50)}
 function saveKN(id){const v=$('kn').value.trim();(db.kn[adate]=db.kn[adate]||{});if(v)db.kn[adate][id]=v;else delete db.kn[adate][id];save();$('m3').classList.remove('on');renderList()}
 function mark(id,v){(db.att[adate]=db.att[adate]||{})[id]=v?1:0;save();renderList();$('nav').children[4]&&render()}
@@ -231,7 +249,9 @@ function pinChg(){dlg(`<h3>تغيير الـ PIN</h3>${pinIn('po','PIN القد�
 function pinSave(){const o=$('po').value,n=$('pw1').value,c=$('pw2').value,e=m=>$('pe').textContent=m;if(o!==curPin())return e('PIN القديم غير صحيح');if(!/^\d{4,8}$/.test(n))return e('الـ PIN لازم يكون من 4 إلى 8 أرقام');if(n!==c)return e('التأكيد مش مطابق');db.pin=n;save();$('m3').classList.remove('on');toast('تم تغيير الـ PIN ✅')}
 // ---- الإشعارات
 function delN(i){const x=notifs()[i];if(!x)return;askOk('حذف الإشعار؟',()=>{db.dis.push(x.key);save();render()})}
-function vNot(){const n=notifs();return`<div class="card"><div class="row"><button class="b a" onclick="db.seen=notifs().map(x=>x.key);save();render()">تصفير العدّاد</button></div>${n.map(x=>`<div class="kid"><label>${esc(x.t)}</label><button class="b s r" onclick="delN(${n.indexOf(x)})">حذف</button></div>`).join('')||'لا توجد إشعارات'}</div>`}
+function vNot(){const n=notifs();if(!nfam)return`<div class="card"><b>إجمالي الإشعارات: <span class="bd" style="font-size:15px">${n.length}</span></b><p style="margin:4px 0 0;font-size:13px">اختار أسرتك لعرض إشعاراتها.</p></div>`+famBoxes('not');
+ const l=n.map((x,i)=>({x,i})).filter(o=>nOf(o.x,nfam));
+ return`<div class="card">${famBack('nfam',famName(nfam))}<span class="pill">${l.length} إشعار</span></div>${l.map(o=>`<div class="kid"><label>${esc(o.x.t)}</label><button class="b s r" onclick="delN(${o.i})">حذف</button></div>`).join('')||'لا توجد إشعارات'}</div>`}
 document.addEventListener('click',e=>{const t=e.target;if(t.tagName=='IMG'&&(t.classList.contains('ph')||t.classList.contains('big'))&&t.getAttribute('src')){$('lbi').src=t.src;$('lb').classList.add('on')}});
 applyLogo();$('main').innerHTML='<div class="card">سجّل الدخول للمتابعة...</div>';
 </script>
